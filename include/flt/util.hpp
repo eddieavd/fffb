@@ -12,7 +12,7 @@
 
 #include <mach/mach_error.h>
 
-#define FLT_VERSION "0.0.2"
+#define FLT_VERSION "0.0.3"
 
 
 namespace flt

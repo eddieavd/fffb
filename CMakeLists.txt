@@ -1,13 +1,13 @@
 cmake_minimum_required( VERSION 3.21 )
 
-project( fffb VERSION 0.0.2 )
+project( fffb VERSION 0.0.3 )
 
 set( CMAKE_CXX_STANDARD            23 )
 set( CMAKE_CXX_STANDARD_REQUIRED True )
 
 set( CMAKE_OSX_ARCHITECTURES "x86_64" )
 
-add_compile_options( -Wall -Wextra -pedantic -Werror -fno-exceptions -O3 -DUTI_RELEASE )
+add_compile_options( -Wall -Wextra -pedantic -Werror -fno-exceptions -fno-rtti -O3 -DUTI_RELEASE )
 
 add_library( fffb SHARED plugin.cpp )
 
