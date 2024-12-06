@@ -279,9 +279,9 @@ bool reset_wheels ()
         return succ ;
 }
 
-void deinit_wheel ()
+void deinit_wheels ()
 {
-        return ;
+        g_wheels.clear() ;
 }
 
 
@@ -458,10 +458,10 @@ SCSAPI_RESULT scs_telemetry_init ( scs_u32_t const version, scs_telemetry_init_p
 SCSAPI_VOID scs_telemetry_shutdown ()
 {
         g_game_log = nullptr ;
-        deinit_wheel() ;
+        deinit_wheels() ;
 }
 
 void __attribute__(( destructor )) unload ()
 {
-        deinit_wheel() ;
+        deinit_wheels() ;
 }
