@@ -24,6 +24,14 @@ to interact with the wheel, i use `flt`, a small library i wrote for interacting
 
 ## usage
 
+### prebuilt binaries
+
+binaries are available on the [releases page](https://github.com/eddieavd/fffb/releases)  
+simply copy `libfffb.dylib` to the plugin directory  
+(plugin directory should be next to the game's executable, default for ats would be `~/Library/Application\ Support/Steam/steamapps/common/American\ Truck\ Simulator/American\ Truck\ Simulator.app/Contents/MacOS/plugins`)
+
+### building from source
+
 to build `flt` and `fffb`:  
 
 ```bash
@@ -49,10 +57,11 @@ cp libfffb.dylib ~/Library/Application\ Support/Steam/steamapps/common/American\
 now you can launch ets2/ats.  
 upon launch, you'll see the advanced sdk features popup, hit OK and the plugin initialization starts.  
 if the wheel leds start flashing and the wheel turns to the right and back, wheel initialization was successful and you should be good to go!  
-however, wheel initialization is a bit unstable so if you don't see the leds flash, reload the plugin by running `sdk reinit` in the in-game console  
+if you don't see the leds flash, reload the plugin by running `sdk reinit` in the in-game console  
 
 ## disclaimer
 
-should work on any apple silicon mac, not tested on x86_64  
+should work on any apple silicon mac  
+since scs requires the binaries to be x86_64, it might work out of the box for x86_64 macs (untested as of now)  
 works only with Logitech G923 PS  
 the ffb protocol is similar on other logitech wheels so it should be easy to extend support, but i don't have any other wheels and don't feel like writing code i can't test  
