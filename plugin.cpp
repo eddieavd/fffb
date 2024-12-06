@@ -173,7 +173,7 @@ uti::tuple< uti::u8_t, uti::u8_t > calculate_autocentering_force ( float speed )
 
 bool update_forces ( flt::vector< flt::wheel > & wheels, telemetry_state_t const & telemetry )
 {
-        uti::tuple< uti::u8_t, uti::u8_t > prev_resonance_params { 0, 0 } ;
+        static uti::tuple< uti::u8_t, uti::u8_t > prev_resonance_params { 0, 0 } ;
 
         auto  resonance_params = calculate_resonance_params   ( telemetry.speed, telemetry.rpm, telemetry.throttle ) ;
         auto      damper_force = calculate_damper_force       ( telemetry.speed, telemetry.rpm ) ;
