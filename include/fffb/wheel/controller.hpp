@@ -79,6 +79,7 @@ public:
         constexpr bool     set_autocenter ( force_data const & force ) const noexcept ;
 
         constexpr bool   add_force  ( force_data const & force ) noexcept ;
+        constexpr bool clear_force  ( force_type const    type ) noexcept ;
         constexpr bool clear_forces (                          ) noexcept ;
 
         constexpr bool download_forces () const noexcept ;
@@ -121,22 +122,45 @@ constexpr wheel controller::_find_known_wheel ( vector< hid_device > const & dev
 constexpr bool controller::calibrate () noexcept
 {
         disable_autocenter() ;
+        stop_forces() ;
 
-        force_data force = {
+        force_data constant = {
                 .type = force_type::CONSTANT ,
                 .params = { 64 }
         } ;
+        force_data damper = {
+                .type = force_type::DAMPER ,
+                .params = { 2, 2, 0, 0 }
+        } ;
+        force_data trap = {
+                .type = force_type::TRAPEZOID ,
+                .params = { 108, 148, 32, 32, 6, 6 }
+        } ;
 
-        add_force( force ) ;
+        clear_forces() ;
+        add_force( constant ) ;
+        add_force( damper ) ;
         download_forces() ;
         play_forces() ;
-        usleep( 500 * 1000 ) ;
+        usleep( 750 * 1000 ) ;
         stop_forces() ;
+
+        enable_autocenter() ;
+        usleep( 750 * 1000 ) ;
+        disable_autocenter() ;
+
         clear_forces() ;
+        add_force( trap ) ;
+        download_forces() ;
+        play_forces() ;
+        usleep( 750 * 1000 ) ;
+        stop_forces() ;
 
-        force.params[ 0 ] = 144 ;
+        constant.params[ 0 ] = 160 ;
 
-        add_force( force ) ;
+        clear_forces() ;
+        add_force( constant ) ;
+        add_force( damper ) ;
         download_forces() ;
         play_forces() ;
         usleep( 1500 * 1000 ) ;
@@ -177,6 +201,19 @@ constexpr bool controller::add_force ( force_data const & force ) noexcept
         return false ;
 }
 
+constexpr bool controller::clear_force ( force_type const type ) noexcept
+{
+        for( auto & force_data : wheel_.forces() )
+        {
+                if( force_data.type == type )
+                {
+                        force_data = {} ;
+                        return true ;
+                }
+        }
+        return false ;
+}
+
 constexpr bool controller::clear_forces () noexcept
 {
         for( auto & force_data : wheel_.forces() )
@@ -192,11 +229,10 @@ constexpr bool controller::download_forces () const noexcept
 
         for( uti::ssize_t i = 0; i < wheel_.forces().size(); ++i )
         {
-                if( wheel_.forces().at( i ).type == force_type::NONE )
+                if( wheel_.forces().at( i ).type != force_type::NONE )
                 {
-                        return status ;
+                        status &= _write_report( protocol_provider::download_force( wheel_.protocol(), ( 1 << i ), wheel_.forces().at( i ) ), "controller::download_forces" ) ;
                 }
-                status &= _write_report( protocol_provider::download_force( wheel_.protocol(), ( 1 << i ), wheel_.forces().at( i ) ), "controller::download_forces" ) ;
         }
         return status ;
 }
@@ -207,11 +243,10 @@ constexpr bool controller::play_forces () const noexcept
 
         for( uti::ssize_t i = 0; i < wheel_.forces().size(); ++i )
         {
-                if( wheel_.forces().at( i ).type == force_type::NONE )
+                if( wheel_.forces().at( i ).type != force_type::NONE )
                 {
-                        break ;
+                        slots |= ( 1 << i ) ;
                 }
-                slots |= ( 1 << i ) ;
         }
         return _write_report( protocol_provider::play_force( wheel_.protocol(), slots ), "controller::play_forces" ) ;
 }
@@ -221,7 +256,7 @@ constexpr bool controller::stop_forces () const noexcept
         return _write_report( protocol_provider::stop_force( wheel_.protocol(), 0x0F ), "controller::stop_forces" ) ;
 }
 
-constexpr bool controller::_write_report ( report const & report, char const * scope ) const noexcept
+constexpr bool controller::_write_report ( report const & report, [[ maybe_unused ]] char const * scope ) const noexcept
 {
         if( !wheel_.device().open() )
         {

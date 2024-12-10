@@ -37,7 +37,7 @@ using set         = __CFSet        ;
 using index       =   CFIndex      ;
 
 
-constexpr bool _try ( io_result result, char const * scope ) noexcept
+constexpr bool _try ( io_result result, [[ maybe_unused ]] char const * scope ) noexcept
 {
         if( result != kIOReturnSuccess )
         {

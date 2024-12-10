@@ -4,6 +4,8 @@
 ///     flt.cpp
 ///
 
+#define FFFB_LOG_LVL 0
+
 #include <fffb/util/version.hpp>
 #include <fffb/device/report.hpp>
 #include <fffb/device/manager.hpp>
@@ -69,8 +71,13 @@ int main ()
                 printf( "no known wheels found\n" ) ;
                 return 1 ;
         }
-        print_faint_prefix() ;
-        printf( "connected to wheel with device id 0x%.8x\n", wheel.device().device_id() ) ;
+        else
+        {
+                uti::string device_name = wheel.device().get_property< uti::string >( kIOHIDProductKey ) ;
+
+                printf( "%s/// flt : connected to wheel with device id 0x%.8x\n", fffb::terminal_faint(), wheel.device().device_id() ) ;
+                printf( "/// flt %s: calibrating " SV_FMT "...\n", fffb::terminal_reset(), SV_ARG( device_name ) ) ;
+        }
 
         if( !wheel.calibrate() )
         {
