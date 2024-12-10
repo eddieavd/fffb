@@ -1,12 +1,14 @@
-//
-//
-//      flt
-//      flt.cpp
-//
+///
+///
+///     fffb
+///     flt.cpp
+///
 
-#include <flt/util.hpp>
-#include <flt/device.hpp>
-#include <flt/wheel.hpp>
+#include <fffb/util/version.hpp>
+#include <fffb/device/report.hpp>
+#include <fffb/device/manager.hpp>
+#include <fffb/wheel/protocol.hpp>
+#include <fffb/wheel/controller.hpp>
 
 #include <uti/string/string_view.hpp>
 
@@ -14,7 +16,9 @@
 
 #define FLT_CMD_QUIT        'q'
 #define FLT_CMD_HELP        'h'
-#define FLT_CMD_REINIT      'r'
+#define FLT_CMD_PLAY        'p'
+#define FLT_CMD_CLEAR       'c'
+#define FLT_CMD_CALIBRATE   'b'
 
 #define FLT_CMD_AUTO        'a'
 #define FLT_CMD_AUTO_ON     'y'
@@ -24,7 +28,7 @@
 #define FLT_CMD_FORCE_OFF   'x'
 #define FLT_CMD_SPRING_CONF 's'
 #define FLT_CMD_DAMPER_CONF 'd'
-#define FLT_CMD_CONST_CONF  'c'
+#define FLT_CMD_CONST_CONF  'f'
 #define FLT_CMD_TRAP_CONF   't'
 #define FLT_CMD_LED_CONF    'l'
 
@@ -34,59 +38,49 @@ void print_faint_prefix   () ;
 void print_warning_prefix () ;
 void print_error_prefix   () ;
 
-void do_cmd_auto   ( flt::wheel & wheel ) ;
-void do_cmd_stop   ( flt::wheel & wheel ) ;
-void do_cmd_spring ( flt::wheel & wheel ) ;
-void do_cmd_damper ( flt::wheel & wheel ) ;
-void do_cmd_const  ( flt::wheel & wheel ) ;
-void do_cmd_trap   ( flt::wheel & wheel ) ;
-void do_cmd_led    ( flt::wheel & wheel ) ;
+void do_cmd_play      ( fffb::controller const & wheel ) ;
+void do_cmd_clear     ( fffb::controller       & wheel ) ;
+void do_cmd_calibrate ( fffb::controller       & wheel ) ;
+void do_cmd_auto      ( fffb::controller const & wheel ) ;
+void do_cmd_stop      ( fffb::controller const & wheel ) ;
+void do_cmd_spring    ( fffb::controller       & wheel ) ;
+void do_cmd_damper    ( fffb::controller       & wheel ) ;
+void do_cmd_const     ( fffb::controller       & wheel ) ;
+void do_cmd_trap      ( fffb::controller       & wheel ) ;
+void do_cmd_led       ( fffb::controller       & wheel ) ;
 
 int main ()
 {
-        flt::terminal_bold() ;
+        printf( "%s", fffb::terminal_bold() ) ;
         printf( "   //////////////////////\n" ) ;
-        printf( "  ///   flt v" FLT_VERSION "   ///\n"  ) ;
+        printf( "  ///   flt v" FFFB_VERSION "   ///\n"  ) ;
         printf( " //////////////////////\n"   ) ;
-        flt::terminal_reset() ;
+        printf( "%s", fffb::terminal_reset() ) ;
 
-init:
-        flt::terminal_faint() ;
+        printf( "%s", fffb::terminal_faint() ) ;
         printf( "/// flt : looking for steering wheels...\n" ) ;
-        flt::terminal_reset() ;
+        printf( "%s", fffb::terminal_reset() ) ;
 
-        flt::wheel wheel ;
-        {
-                flt::device_manager manager ;
+        fffb::controller wheel( fffb::device_manager().list_devices() ) ;
 
-                auto wheels = manager.find_known_wheels() ;
-
-                for( flt::hid_device & device : wheels )
-                {
-                        flt::terminal_faint() ;
-                        printf( "/// flt : trying device %x...\n", device.device_id_ ) ;
-                        flt::terminal_reset() ;
-
-                        if( flt::wheel( device ).calibrate() )
-                        {
-                                wheel = flt::wheel( device ) ;
-                                print_faint_prefix() ;
-                                printf( "steering wheel calibrated\n" ) ;
-                                break ;
-                        }
-                        else
-                        {
-                                print_warning_prefix() ;
-                                printf( "calibration failed\n" ) ;
-                        }
-                }
-        }
         if( !wheel )
         {
                 print_error_prefix() ;
-                printf( "failed connecting to a steering wheel\n" ) ;
+                printf( "no known wheels found\n" ) ;
                 return 1 ;
         }
+        print_faint_prefix() ;
+        printf( "connected to wheel with device id 0x%.8x\n", wheel.device().device_id() ) ;
+
+        if( !wheel.calibrate() )
+        {
+                print_error_prefix() ;
+                printf( "wheel calibration failed\n" ) ;
+                return 1 ;
+        }
+        print_faint_prefix() ;
+        printf( "wheel calibration successful\n" ) ;
+
         char cmd { ' ' } ;
 
         print_faint_prefix() ;
@@ -95,7 +89,6 @@ init:
 
         while( cmd != FLT_CMD_QUIT )
         {
-                bool reinit = false ;
                 scanf( "%c", &cmd ) ;
 
                 switch( cmd )
@@ -107,8 +100,14 @@ init:
                         case FLT_CMD_HELP:
                                 print_help() ;
                                 break ;
-                        case FLT_CMD_REINIT:
-                                reinit = true ;
+                        case FLT_CMD_PLAY:
+                                do_cmd_play( wheel ) ;
+                                break ;
+                        case FLT_CMD_CLEAR:
+                                do_cmd_clear( wheel ) ;
+                                break ;
+                        case FLT_CMD_CALIBRATE:
+                                do_cmd_calibrate( wheel ) ;
                                 break ;
                         case FLT_CMD_AUTO:
                                 do_cmd_auto( wheel ) ;
@@ -134,24 +133,68 @@ init:
                         default:
                                 break ;
                 }
-                if( reinit ) goto init ;
                 if( cmd != '\n' && cmd != FLT_CMD_QUIT )
                 {
                         print_faint_prefix() ;
                         printf( "" ) ;
                 }
         }
-        printf( "%s///%s\n", flt::terminal_faint_cstr(), flt::terminal_reset_cstr() ) ;
+        printf( "%s///%s\n", fffb::terminal_faint(), fffb::terminal_reset() ) ;
         print_faint_prefix() ;
         printf( "quitting...\n" ) ;
-        printf( "%s//%s\n", flt::terminal_faint_cstr(), flt::terminal_reset_cstr() ) ;
-        printf( "%s/%s\n", flt::terminal_faint_cstr(), flt::terminal_reset_cstr() ) ;
+        printf( "%s//%s\n", fffb::terminal_faint(), fffb::terminal_reset() ) ;
+        printf( "%s/%s\n", fffb::terminal_faint(), fffb::terminal_reset() ) ;
 
 
         return 0 ;
 }
 
-void do_cmd_auto ( flt::wheel & wheel )
+void do_cmd_play ( fffb::controller const & wheel )
+{
+        if( wheel.download_forces() && wheel.play_forces() )
+        {
+                print_faint_prefix() ;
+                printf( "downloaded and played forces\n" ) ;
+        }
+        else
+        {
+                print_error_prefix() ;
+                printf( "failed downloading and playing forces\n" ) ;
+        }
+}
+
+void do_cmd_clear ( fffb::controller & wheel )
+{
+        if( wheel.clear_forces() )
+        {
+                print_faint_prefix() ;
+                printf( "cleared forces\n" ) ;
+        }
+        else
+        {
+                print_error_prefix() ;
+                printf( "failed clearing forces\n" ) ;
+        }
+}
+
+void do_cmd_calibrate ( fffb::controller & wheel )
+{
+        print_faint_prefix() ;
+        printf( "calibrating wheel...\n" ) ;
+
+        if( wheel.calibrate() )
+        {
+                print_faint_prefix() ;
+                printf( "calibration complete\n" ) ;
+        }
+        else
+        {
+                print_error_prefix() ;
+                printf( "calibration failed\n" ) ;
+        }
+}
+
+void do_cmd_auto ( fffb::controller const & wheel )
 {
         print_faint_prefix() ;
         printf( "y to enable, n to disable, c to configure : " ) ;
@@ -185,21 +228,17 @@ void do_cmd_auto ( flt::wheel & wheel )
         }
         else if( cmd == FLT_CMD_AUTO_CONF )
         {
-                uti::i32_t k1, k2, clip ;
+                uti::i32_t k, clip ;
 
                 print_faint_prefix() ;
-                printf( "slope left (0..7) : " ) ;
-                scanf( "%d", &k1 ) ;
-
-                print_faint_prefix() ;
-                printf( "slope right (0..7) : " ) ;
-                scanf( "%d", &k2 ) ;
+                printf( "slope (0..7) : " ) ;
+                scanf( "%d", &k ) ;
 
                 print_faint_prefix() ;
                 printf( "max force (0..255) : " ) ;
                 scanf( "%d", &clip ) ;
 
-                if( !wheel.set_autocenter_spring( k1, k2, clip ) )
+                if( !wheel.set_autocenter( fffb::force_data{ .type = fffb::force_type::AUTO, .params = { static_cast< uti::u8_t >( k ), static_cast< uti::u8_t >( clip ) } } ) )
                 {
                         print_error_prefix() ;
                         printf( "failed setting autocenter spring\n" ) ;
@@ -210,7 +249,7 @@ void do_cmd_auto ( flt::wheel & wheel )
         }
 }
 
-void do_cmd_stop ( flt::wheel & wheel )
+void do_cmd_stop ( fffb::controller const & wheel )
 {
         if( !wheel.stop_forces() )
         {
@@ -222,7 +261,7 @@ void do_cmd_stop ( flt::wheel & wheel )
         printf( "stopped forces\n" ) ;
 }
 
-void do_cmd_spring ( flt::wheel & wheel )
+void do_cmd_spring ( fffb::controller & wheel )
 {
         uti::i32_t k1, k2, d1, d2, s1, s2, clip ;
 
@@ -254,7 +293,20 @@ void do_cmd_spring ( flt::wheel & wheel )
         printf( "max force (0..255) : " ) ;
         scanf( "%d", &clip ) ;
 
-        if( !wheel.set_custom_spring( d1, d2, k1, k2, s1, s2, clip ) )
+        fffb::force_data spring = {
+                .type = fffb::force_type::SPRING ,
+                .params = {
+                        static_cast< uti::u8_t >(   d1 ),
+                        static_cast< uti::u8_t >(   d2 ),
+                        static_cast< uti::u8_t >(   k1 ),
+                        static_cast< uti::u8_t >(   k2 ),
+                        static_cast< uti::u8_t >(   s1 ),
+                        static_cast< uti::u8_t >(   s2 ),
+                        static_cast< uti::u8_t >( clip )
+                }
+        } ;
+
+        if( !wheel.add_force( spring ) )
         {
                 print_error_prefix() ;
                 printf( "failed setting custom spring\n" ) ;
@@ -264,7 +316,7 @@ void do_cmd_spring ( flt::wheel & wheel )
         printf( "custom spring set\n" ) ;
 }
 
-void do_cmd_damper ( flt::wheel & wheel )
+void do_cmd_damper ( fffb::controller & wheel )
 {
         uti::i32_t k1, k2, s1, s2 ;
 
@@ -284,7 +336,17 @@ void do_cmd_damper ( flt::wheel & wheel )
         printf( "invert right (0..1) : " ) ;
         scanf( "%d", &s2 ) ;
 
-        if( !wheel.set_damper( k1, k2, s1, s2 ) )
+        fffb::force_data damper = {
+                .type = fffb::force_type::DAMPER ,
+                .params = {
+                        static_cast< uti::u8_t >( k1 ),
+                        static_cast< uti::u8_t >( k2 ),
+                        static_cast< uti::u8_t >( s1 ),
+                        static_cast< uti::u8_t >( s2 ),
+                }
+        } ;
+
+        if( !wheel.add_force( damper ) )
         {
                 print_error_prefix() ;
                 printf( "failed setting damper\n" ) ;
@@ -294,7 +356,7 @@ void do_cmd_damper ( flt::wheel & wheel )
         printf( "damper set\n" ) ;
 }
 
-void do_cmd_const ( flt::wheel & wheel )
+void do_cmd_const ( fffb::controller & wheel )
 {
         uti::i32_t force ;
 
@@ -302,7 +364,12 @@ void do_cmd_const ( flt::wheel & wheel )
         printf( "force (0..255) : " ) ;
         scanf( "%d", &force ) ;
 
-        if( !wheel.set_constant_force( force ) )
+        fffb::force_data constant = {
+                .type = fffb::force_type::CONSTANT ,
+                .params = { static_cast< uti::u8_t >( force ) }
+        } ;
+
+        if( !wheel.add_force( constant ) )
         {
                 print_error_prefix() ;
                 printf( "failed setting constant force\n" ) ;
@@ -312,7 +379,7 @@ void do_cmd_const ( flt::wheel & wheel )
         printf( "constant force set\n" ) ;
 }
 
-void do_cmd_trap ( flt::wheel & wheel )
+void do_cmd_trap ( fffb::controller & wheel )
 {
         uti::i32_t force_max, force_min, t_max, t_min, diff_x, diff_y ;
 
@@ -340,7 +407,19 @@ void do_cmd_trap ( flt::wheel & wheel )
         printf( "slope step y (0..15) : " ) ;
         scanf( "%d", &diff_y ) ;
 
-        if( !wheel.set_trapezoid( force_max, force_min, t_max, t_min, diff_x, diff_y ) )
+        fffb::force_data trap = {
+                .type = fffb::force_type::TRAPEZOID ,
+                .params = { 
+                        static_cast< uti::u8_t >( force_max ),
+                        static_cast< uti::u8_t >( force_min ),
+                        static_cast< uti::u8_t >( t_max ),
+                        static_cast< uti::u8_t >( t_min ),
+                        static_cast< uti::u8_t >( diff_x ),
+                        static_cast< uti::u8_t >( diff_y )
+                }
+        } ;
+
+        if( !wheel.add_force( trap ) )
         {
                 print_error_prefix() ;
                 printf( "failed setting trapezoid force\n" ) ;
@@ -350,7 +429,7 @@ void do_cmd_trap ( flt::wheel & wheel )
         printf( "trapezoid force set\n" ) ;
 }
 
-void do_cmd_led ( flt::wheel & wheel )
+void do_cmd_led ( fffb::controller & wheel )
 {
         uti::i32_t led_pattern ;
 
@@ -358,7 +437,8 @@ void do_cmd_led ( flt::wheel & wheel )
         printf( "led pattern (0..31) : " ) ;
         scanf( "%d", &led_pattern ) ;
 
-        if( !wheel.set_led_pattern( led_pattern ) )
+        ( void ) wheel ;
+//      if( !wheel.set_led_pattern( led_pattern ) )
         {
                 print_error_prefix() ;
                 printf( "failed setting led pattern\n" ) ;
@@ -370,34 +450,36 @@ void do_cmd_led ( flt::wheel & wheel )
 
 void print_help ()
 {
-        printf( "%s///%s\n", flt::terminal_faint_cstr(), flt::terminal_reset_cstr() ) ;
-        printf( "%s///%s flt - fuck logitech - v" FLT_VERSION "\n", flt::terminal_faint_cstr(), flt::terminal_reset_cstr() ) ;
-        printf( "%s///%s\n", flt::terminal_faint_cstr(), flt::terminal_reset_cstr() ) ;
-        printf( "%s///%s commands :\n", flt::terminal_faint_cstr(), flt::terminal_reset_cstr() ) ;
-        printf( "%s///%s    q - quit\n", flt::terminal_faint_cstr(), flt::terminal_reset_cstr() ) ;
-        printf( "%s///%s    h - help\n", flt::terminal_faint_cstr(), flt::terminal_reset_cstr() ) ;
-        printf( "%s///%s    r - reinitialize wheel\n", flt::terminal_faint_cstr(), flt::terminal_reset_cstr() ) ;
-        printf( "%s///%s    a - configure autocentering\n", flt::terminal_faint_cstr(), flt::terminal_reset_cstr() ) ;
-        printf( "%s///%s    x - stop forces\n", flt::terminal_faint_cstr(), flt::terminal_reset_cstr() ) ;
-        printf( "%s///%s    s - configure spring force\n", flt::terminal_faint_cstr(), flt::terminal_reset_cstr() ) ;
-        printf( "%s///%s    d - configure damper force\n", flt::terminal_faint_cstr(), flt::terminal_reset_cstr() ) ;
-        printf( "%s///%s    c - configure constant force\n", flt::terminal_faint_cstr(), flt::terminal_reset_cstr() ) ;
-        printf( "%s///%s    t - configure trapezoid force\n", flt::terminal_faint_cstr(), flt::terminal_reset_cstr() ) ;
-        printf( "%s///%s    l - configure leds\n", flt::terminal_faint_cstr(), flt::terminal_reset_cstr() ) ;
-        printf( "%s///%s\n", flt::terminal_faint_cstr(), flt::terminal_reset_cstr() ) ;
+        printf( "%s///%s\n", fffb::terminal_faint(), fffb::terminal_reset() ) ;
+        printf( "%s///%s flt - fuck logitech - v" FFFB_VERSION "\n", fffb::terminal_faint(), fffb::terminal_reset() ) ;
+        printf( "%s///%s\n", fffb::terminal_faint(), fffb::terminal_reset() ) ;
+        printf( "%s///%s commands :\n", fffb::terminal_faint(), fffb::terminal_reset() ) ;
+        printf( "%s///%s    q - quit\n", fffb::terminal_faint(), fffb::terminal_reset() ) ;
+        printf( "%s///%s    h - help\n", fffb::terminal_faint(), fffb::terminal_reset() ) ;
+        printf( "%s///%s    p - play forces\n", fffb::terminal_faint(), fffb::terminal_reset() ) ;
+        printf( "%s///%s    c - clear forces\n", fffb::terminal_faint(), fffb::terminal_reset() ) ;
+        printf( "%s///%s    b - recalibrate wheel\n", fffb::terminal_faint(), fffb::terminal_reset() ) ;
+        printf( "%s///%s    a - configure autocentering\n", fffb::terminal_faint(), fffb::terminal_reset() ) ;
+        printf( "%s///%s    x - stop forces\n", fffb::terminal_faint(), fffb::terminal_reset() ) ;
+        printf( "%s///%s    s - configure spring force\n", fffb::terminal_faint(), fffb::terminal_reset() ) ;
+        printf( "%s///%s    d - configure damper force\n", fffb::terminal_faint(), fffb::terminal_reset() ) ;
+        printf( "%s///%s    f - configure constant force\n", fffb::terminal_faint(), fffb::terminal_reset() ) ;
+        printf( "%s///%s    t - configure trapezoid force\n", fffb::terminal_faint(), fffb::terminal_reset() ) ;
+        printf( "%s///%s    l - configure leds\n", fffb::terminal_faint(), fffb::terminal_reset() ) ;
+        printf( "%s///%s\n", fffb::terminal_faint(), fffb::terminal_reset() ) ;
 }
 
 void print_faint_prefix ()
 {
-        printf( "%s/// flt %s: ", flt::terminal_faint_cstr(), flt::terminal_reset_cstr() ) ;
+        printf( "%s/// flt %s: ", fffb::terminal_faint(), fffb::terminal_reset() ) ;
 }
 
 void print_warning_prefix ()
 {
-        printf( "%s/// flt::warning %s: ", flt::terminal_yellow_cstr(), flt::terminal_reset_cstr() ) ;
+        printf( "%s/// flt::warning %s: ", fffb::terminal_yellow(), fffb::terminal_reset() ) ;
 }
 
 void print_error_prefix ()
 {
-        printf( "%s/// flt::error %s: ", flt::terminal_red_cstr(), flt::terminal_reset_cstr() ) ;
+        printf( "%s/// flt::error %s: ", fffb::terminal_red(), fffb::terminal_reset() ) ;
 }
