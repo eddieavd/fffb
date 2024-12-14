@@ -23,8 +23,6 @@ constexpr void set_applier_function_copy_to_cfarray ( void const * value, void *
 UTI_NODISCARD constexpr uti::string get_property_string ( apple::hid_device * hid_device, char const * property ) noexcept ;
 UTI_NODISCARD constexpr uti::i32_t  get_property_number ( apple::hid_device * hid_device, char const * property ) noexcept ;
 
-UTI_NODISCARD constexpr std::string get_property_std_string ( apple::hid_device * hid_device, char const * property ) noexcept ;
-
 UTI_NODISCARD constexpr uti::u32_t make_device_id ( uti::u32_t product_id, uti::u32_t vendor_id ) noexcept ;
 
 
@@ -77,7 +75,7 @@ public:
                 }
                 else
                 {
-                        FFFB_ERR_S( "hid_device::get_property", "requested type not supported" ) ;
+                        FFFB_F_ERR_S( "hid_device::get_property", "requested type not supported" ) ;
                         return {} ;
                 }
         }
@@ -136,17 +134,19 @@ constexpr apple::hid_manager * device_manager::_create_hid_manager () const noex
         apple::hid_manager * manager = IOHIDManagerCreate( kCFAllocatorDefault, kIOHIDManagerOptionNone ) ;
         IOHIDManagerSetDeviceMatching( manager, nullptr ) ;
         IOHIDManagerOpen( manager, kIOHIDOptionsTypeSeizeDevice ) ;
+        FFFB_F_DBG_S( "device_manager", "device manager created" ) ;
         return manager ;
 }
 
 constexpr void device_manager::_destroy_hid_manager () const noexcept
 {
         if( hid_manager_ ) IOHIDManagerClose( hid_manager_, kIOHIDManagerOptionNone ) ;
+        FFFB_F_DBG_S( "device_manager", "device manager destroyed" ) ;
 }
 
 constexpr vector< hid_device > device_manager::_list_devices () const noexcept
 {
-        FFFB_DBG_S( "device_manager::_list_devices", "listing devices..." ) ;
+        FFFB_F_DBG_S( "device_manager::_list_devices", "listing devices..." ) ;
 
         vector< hid_device > devices ;
 
@@ -165,7 +165,7 @@ constexpr vector< hid_device > device_manager::_list_devices () const noexcept
                 devices.emplace_back( device ) ;
         }
         CFRelease( device_array ) ;
-        FFFB_DBG_S( "device_manager::_list_devices", "found %d devices", devices.size() ) ;
+        FFFB_F_DBG_S( "device_manager::_list_devices", "found %d devices", devices.size() ) ;
         return devices ;
 }
 

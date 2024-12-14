@@ -33,13 +33,13 @@ UTI_NODISCARD constexpr bool write_report ( apple::hid_device * device, report c
 
 UTI_NODISCARD constexpr report read_report ( apple::hid_device const * )
 {
-        FFFB_WARN_S( "read_report", "unimplemented" ) ;
+        FFFB_F_ERR_S( "read_report", "unimplemented" ) ;
         return {} ;
 }
 
 UTI_NODISCARD constexpr vector< report > read_reports ( apple::hid_device const * )
 {
-        FFFB_WARN_S( "read_reports", "unimplemented" ) ;
+        FFFB_F_ERR_S( "read_reports", "unimplemented" ) ;
         return {} ;
 }
 

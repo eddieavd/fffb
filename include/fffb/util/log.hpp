@@ -15,6 +15,8 @@
 
 #include <pthread.h>
 
+#define FFFB_LOG_FILE_PATH "/tmp/fffb.log"
+
 #define FFFB_VTSEQ(ID) ("\x1b[" #ID "m")
 
 #ifndef   FFFB_LOG_LVL
@@ -39,15 +41,31 @@
 #define FFFB_WARN_S(...)
 #define FFFB_ERR_S(...)
 
+#define FFFB_F_LOG(...)
+#define FFFB_F_SUCC(...)
+#define FFFB_F_FAIL(...)
+#define FFFB_F_DBG(...)
+#define FFFB_F_INFO(...)
+#define FFFB_F_WARN(...)
+#define FFFB_F_ERR(...)
+
+#define FFFB_F_LOG_S(...)
+#define FFFB_F_SUCC_S(...)
+#define FFFB_F_FAIL_S(...)
+#define FFFB_F_DBG_S(...)
+#define FFFB_F_INFO_S(...)
+#define FFFB_F_WARN_S(...)
+#define FFFB_F_ERR_S(...)
+
 #else
 
-#define FFFB_LOG(...)  fffb::log_2(                  __VA_ARGS__ )
-#define FFFB_SUCC(...) fffb::log_2( fffb::log_level::succ, __VA_ARGS__ )
-#define FFFB_FAIL(...) fffb::log_2( fffb::log_level::fail, __VA_ARGS__ )
+#define FFFB_LOG(...)  fffb::log_2( stderr,                        __VA_ARGS__ )
+#define FFFB_SUCC(...) fffb::log_2( stderr, fffb::log_level::succ, __VA_ARGS__ )
+#define FFFB_FAIL(...) fffb::log_2( stderr, fffb::log_level::fail, __VA_ARGS__ )
 
-#define FFFB_LOG_S(...)  fffb::log_3(                  __VA_ARGS__ )
-#define FFFB_SUCC_S(...) fffb::log_3( fffb::log_level::succ, __VA_ARGS__ )
-#define FFFB_FAIL_S(...) fffb::log_3( fffb::log_level::fail, __VA_ARGS__ )
+#define FFFB_LOG_S(...)  fffb::log_3( stderr,                        __VA_ARGS__ )
+#define FFFB_SUCC_S(...) fffb::log_3( stderr, fffb::log_level::succ, __VA_ARGS__ )
+#define FFFB_FAIL_S(...) fffb::log_3( stderr, fffb::log_level::fail, __VA_ARGS__ )
 
 #define FFFB_DBG(...)
 #define FFFB_INFO(...)
@@ -62,29 +80,75 @@
 #if FFFB_LOG_LVL > 0
 #       undef  FFFB_ERR
 #       undef  FFFB_ERR_S
-#       define FFFB_ERR(...)   fffb::log_2( fffb::log_level::err , __VA_ARGS__ )
-#       define FFFB_ERR_S(...) fffb::log_3( fffb::log_level::err , __VA_ARGS__ )
+#       define FFFB_ERR(...)   fffb::log_2( stderr, fffb::log_level::err , __VA_ARGS__ )
+#       define FFFB_ERR_S(...) fffb::log_3( stderr, fffb::log_level::err , __VA_ARGS__ )
 #endif
 
 #if FFFB_LOG_LVL > 1
 #       undef  FFFB_WARN
 #       undef  FFFB_WARN_S
-#       define FFFB_WARN(...)   fffb::log_2( fffb::log_level::warn , __VA_ARGS__ )
-#       define FFFB_WARN_S(...) fffb::log_3( fffb::log_level::warn , __VA_ARGS__ )
+#       define FFFB_WARN(...)   fffb::log_2( stderr, fffb::log_level::warn , __VA_ARGS__ )
+#       define FFFB_WARN_S(...) fffb::log_3( stderr, fffb::log_level::warn , __VA_ARGS__ )
 #endif
 
 #if FFFB_LOG_LVL > 2
 #       undef  FFFB_INFO
 #       undef  FFFB_INFO_S
-#       define FFFB_INFO(...)   fffb::log_2( fffb::log_level::info , __VA_ARGS__ )
-#       define FFFB_INFO_S(...) fffb::log_3( fffb::log_level::info , __VA_ARGS__ )
+#       define FFFB_INFO(...)   fffb::log_2( stderr, fffb::log_level::info , __VA_ARGS__ )
+#       define FFFB_INFO_S(...) fffb::log_3( stderr, fffb::log_level::info , __VA_ARGS__ )
 #endif
 
 #if FFFB_LOG_LVL > 3
 #       undef  FFFB_DBG
 #       undef  FFFB_DBG_S
-#       define FFFB_DBG(...)   fffb::log_2( fffb::log_level::dbg , __VA_ARGS__ )
-#       define FFFB_DBG_S(...) fffb::log_3( fffb::log_level::dbg , __VA_ARGS__ )
+#       define FFFB_DBG(...)   fffb::log_2( stderr, fffb::log_level::dbg , __VA_ARGS__ )
+#       define FFFB_DBG_S(...) fffb::log_3( stderr, fffb::log_level::dbg , __VA_ARGS__ )
+#endif
+
+#define FFFB_F_LOG(...)  fffb::log_2( fffb::g_log_file.fptr,                        __VA_ARGS__ )
+#define FFFB_F_SUCC(...) fffb::log_2( fffb::g_log_file.fptr, fffb::log_level::succ, __VA_ARGS__ )
+#define FFFB_F_FAIL(...) fffb::log_2( fffb::g_log_file.fptr, fffb::log_level::fail, __VA_ARGS__ )
+
+#define FFFB_F_LOG_S(...)  fffb::log_3( fffb::g_log_file.fptr,                        __VA_ARGS__ )
+#define FFFB_F_SUCC_S(...) fffb::log_3( fffb::g_log_file.fptr, fffb::log_level::succ, __VA_ARGS__ )
+#define FFFB_F_FAIL_S(...) fffb::log_3( fffb::g_log_file.fptr, fffb::log_level::fail, __VA_ARGS__ )
+
+#define FFFB_F_DBG(...)
+#define FFFB_F_INFO(...)
+#define FFFB_F_WARN(...)
+#define FFFB_F_ERR(...)
+
+#define FFFB_F_DBG_S(...)
+#define FFFB_F_INFO_S(...)
+#define FFFB_F_WARN_S(...)
+#define FFFB_F_ERR_S(...)
+
+#if FFFB_LOG_LVL > 0
+#       undef  FFFB_F_ERR
+#       undef  FFFB_F_ERR_S
+#       define FFFB_F_ERR(...)   fffb::log_2( fffb::g_log_file.fptr, fffb::log_level::err , __VA_ARGS__ )
+#       define FFFB_F_ERR_S(...) fffb::log_3( fffb::g_log_file.fptr, fffb::log_level::err , __VA_ARGS__ )
+#endif
+
+#if FFFB_LOG_LVL > 1
+#       undef  FFFB_F_WARN
+#       undef  FFFB_F_WARN_S
+#       define FFFB_F_WARN(...)   fffb::log_2( fffb::g_log_file.fptr, fffb::log_level::warn , __VA_ARGS__ )
+#       define FFFB_F_WARN_S(...) fffb::log_3( fffb::g_log_file.fptr, fffb::log_level::warn , __VA_ARGS__ )
+#endif
+
+#if FFFB_LOG_LVL > 2
+#       undef  FFFB_F_INFO
+#       undef  FFFB_F_INFO_S
+#       define FFFB_F_INFO(...)   fffb::log_2( fffb::g_log_file.fptr, fffb::log_level::info , __VA_ARGS__ )
+#       define FFFB_F_INFO_S(...) fffb::log_3( fffb::g_log_file.fptr, fffb::log_level::info , __VA_ARGS__ )
+#endif
+
+#if FFFB_LOG_LVL > 3
+#       undef  FFFB_F_DBG
+#       undef  FFFB_F_DBG_S
+#       define FFFB_F_DBG(...)   fffb::log_2( fffb::g_log_file.fptr, fffb::log_level::dbg , __VA_ARGS__ )
+#       define FFFB_F_DBG_S(...) fffb::log_3( fffb::g_log_file.fptr, fffb::log_level::dbg , __VA_ARGS__ )
 #endif
 
 #endif // FFFB_LOGS
@@ -109,6 +173,19 @@ constexpr char const * terminal_purple    () { return FFFB_VTSEQ( 35 ) ; }
 constexpr char const * terminal_cyan      () { return FFFB_VTSEQ( 36 ) ; }
 constexpr char const * terminal_lgray     () { return FFFB_VTSEQ( 37 ) ; }
 constexpr char const * terminal_lred      () { return FFFB_VTSEQ( 91 ) ; }
+
+
+struct log_file
+{
+        constexpr  log_file ( char const * filepath ) noexcept :     fptr { fopen( filepath, "w" ) } {}
+        constexpr ~log_file (                       ) noexcept { if( fptr ) fclose( fptr ) ; }
+
+        constexpr operator bool () const noexcept { return fptr != nullptr ; }
+
+        FILE * fptr ;
+} ;
+
+static log_file g_log_file( FFFB_LOG_FILE_PATH ) ;
 
 
 enum class log_level
@@ -173,90 +250,94 @@ constexpr uti::string time_string ()
         return time_str ;
 }
 
-constexpr void log_2_v ( log_level level, char const * fmt, va_list args )
+constexpr void log_2_v ( FILE * dest, log_level level, char const * fmt, va_list args )
 {
         uti::string time = time_string() ;
 
         switch( level )
         {
                 case log_level::dbg:
-                        fprintf( stderr, "%s%s:: " SV_FMT " : fffb::dbg  : ", terminal_purple(), terminal_bold(), SV_ARG( time ) ) ;
+                        fprintf( dest, "%s%s:: " SV_FMT " : fffb::dbg  : ", terminal_purple(), terminal_bold(), SV_ARG( time ) ) ;
                         break ;
                 case log_level::info:
-                        fprintf( stderr, "%s:: " SV_FMT " : fffb::info : ", terminal_bold(), SV_ARG( time ) ) ;
+                        fprintf( dest, "%s:: " SV_FMT " : fffb::info : ", terminal_bold(), SV_ARG( time ) ) ;
                         break ;
                 case log_level::warn:
-                        fprintf( stderr, "%s%s:: " SV_FMT " : fffb::warn : ", terminal_yellow(), terminal_bold(), SV_ARG( time ) ) ;
+                        fprintf( dest, "%s%s:: " SV_FMT " : fffb::warn : ", terminal_yellow(), terminal_bold(), SV_ARG( time ) ) ;
                         break ;
                 case log_level::err:
-                        fprintf( stderr, "%s%s:: " SV_FMT " : fffb::err  : ", terminal_red(), terminal_bold(), SV_ARG( time ) ) ;
+                        fprintf( dest, "%s%s:: " SV_FMT " : fffb::err  : ", terminal_red(), terminal_bold(), SV_ARG( time ) ) ;
                         break ;
                 case log_level::succ:
-                        fprintf( stderr, "%s%s:: " SV_FMT " : fffb::succ : ", terminal_green(), terminal_bold(), SV_ARG( time ) ) ;
+                        fprintf( dest, "%s%s:: " SV_FMT " : fffb::succ : ", terminal_green(), terminal_bold(), SV_ARG( time ) ) ;
                         break ;
                 case log_level::fail:
-                        fprintf( stderr, "%s%s:: " SV_FMT " : fffb::fail : ", terminal_red(), terminal_bold(), SV_ARG( time ) ) ;
+                        fprintf( dest, "%s%s:: " SV_FMT " : fffb::fail : ", terminal_red(), terminal_bold(), SV_ARG( time ) ) ;
                         break ;
                 default:
-                        fprintf( stderr, "%s%s:: " SV_FMT " : fffb::%4d : ", terminal_red(), terminal_faint(), SV_ARG( time ), uti::to_underlying( level ) ) ;
+                        fprintf( dest, "%s%s:: " SV_FMT " : fffb::%4d : ", terminal_red(), terminal_faint(), SV_ARG( time ), uti::to_underlying( level ) ) ;
                         break ;
         }
-        fprintf( stderr, "%s", terminal_reset() ) ;
+        fprintf( dest, "%s", terminal_reset() ) ;
 
-        vfprintf( stderr, fmt, args ) ;
-        fprintf( stderr, "\n" ) ;
+        vfprintf( dest, fmt, args ) ;
+        fprintf( dest, "\n" ) ;
 }
 
-constexpr void log_3_v ( log_level level, char const * scope, char const * fmt, va_list args )
+constexpr void log_3_v ( FILE * dest, log_level level, char const * scope, char const * fmt, va_list args )
 {
         uti::string time = time_string() ;
 
         switch( level )
         {
                 case log_level::dbg:
-                        fprintf( stderr, "%s%s:: " SV_FMT " : fffb::dbg  : %s : ", terminal_purple(), terminal_bold(), SV_ARG( time ), scope ) ;
+                        fprintf( dest, "%s%s:: " SV_FMT " : fffb::dbg  : %s : ", terminal_purple(), terminal_bold(), SV_ARG( time ), scope ) ;
                         break ;
                 case log_level::info:
-                        fprintf( stderr, "%s:: " SV_FMT " : fffb::info : %s : ", terminal_bold(), SV_ARG( time ), scope ) ;
+                        fprintf( dest, "%s:: " SV_FMT " : fffb::info : %s : ", terminal_bold(), SV_ARG( time ), scope ) ;
                         break ;
                 case log_level::warn:
-                        fprintf( stderr, "%s%s:: " SV_FMT " : fffb::warn : %s : ", terminal_yellow(), terminal_bold(), SV_ARG( time ), scope ) ;
+                        fprintf( dest, "%s%s:: " SV_FMT " : fffb::warn : %s : ", terminal_yellow(), terminal_bold(), SV_ARG( time ), scope ) ;
                         break ;
                 case log_level::err:
-                        fprintf( stderr, "%s%s:: " SV_FMT " : fffb::err  : %s : ", terminal_red(), terminal_bold(), SV_ARG( time ), scope) ;
+                        fprintf( dest, "%s%s:: " SV_FMT " : fffb::err  : %s : ", terminal_red(), terminal_bold(), SV_ARG( time ), scope) ;
                         break ;
                 case log_level::succ:
-                        fprintf( stderr, "%s%s:: " SV_FMT " : fffb::succ : %s : ", terminal_green(), terminal_bold(), SV_ARG( time ), scope ) ;
+                        fprintf( dest, "%s%s:: " SV_FMT " : fffb::succ : %s : ", terminal_green(), terminal_bold(), SV_ARG( time ), scope ) ;
                         break ;
                 case log_level::fail:
-                        fprintf( stderr, "%s%s:: " SV_FMT " : fffb::fail : %s : ", terminal_red(), terminal_bold(), SV_ARG( time ), scope ) ;
+                        fprintf( dest, "%s%s:: " SV_FMT " : fffb::fail : %s : ", terminal_red(), terminal_bold(), SV_ARG( time ), scope ) ;
                         break ;
                 default:
-                        fprintf( stderr, "%s%s:: " SV_FMT " : fffb::%4d : %s : ", terminal_red(), terminal_faint(), SV_ARG( time ), uti::to_underlying( level ), scope ) ;
+                        fprintf( dest, "%s%s:: " SV_FMT " : fffb::%4d : %s : ", terminal_red(), terminal_faint(), SV_ARG( time ), uti::to_underlying( level ), scope ) ;
                         break ;
         }
-        fprintf( stderr, "%s", terminal_reset() ) ;
+        fprintf( dest, "%s", terminal_reset() ) ;
 
-        vfprintf( stderr, fmt, args ) ;
-        fprintf( stderr, "\n" ) ;
+        vfprintf( dest, fmt, args ) ;
+        fprintf( dest, "\n" ) ;
 }
 
 
 } // namespace _detail
 
-constexpr void log_2 ( log_level level, char const * fmt, ... )
+constexpr void log_2 ( FILE * dest, log_level level, char const * fmt, ... )
 {
+        if( dest == nullptr ) dest = stderr ;
+
         va_list args ;
         va_start( args, fmt ) ;
-        _detail::log_2_v( level, fmt, args ) ;
+        _detail::log_2_v( dest, level, fmt, args ) ;
         va_end( args ) ;
 }
 
-constexpr void log_3 ( log_level level, char const * scope, char const * fmt, ... )
+constexpr void log_3 ( FILE * dest, log_level level, char const * scope, char const * fmt, ... )
 {
+        if( dest == nullptr ) dest = stderr ;
+
         va_list args ;
         va_start( args, fmt ) ;
-        _detail::log_3_v( level, scope, fmt, args ) ;
+        _detail::log_3_v( dest, level, scope, fmt, args ) ;
         va_end( args ) ;
 }
 

@@ -51,6 +51,7 @@ constexpr bool _try ( io_result result, [[ maybe_unused ]] char const * scope ) 
 } // namespace apple
 
 
+using timestamp_t = uti::u64_t ;
 using device_id_t = uti::u32_t ;
 
 template< typename T > using vector = uti::vector< T > ;

@@ -4,8 +4,6 @@
 ///     flt.cpp
 ///
 
-#define FFFB_LOG_LVL 0
-
 #include <fffb/util/version.hpp>
 #include <fffb/device/report.hpp>
 #include <fffb/device/manager.hpp>
@@ -140,10 +138,13 @@ int main ()
                         default:
                                 break ;
                 }
-                if( cmd != '\n' && cmd != FLT_CMD_QUIT )
+                if( cmd != FLT_CMD_QUIT )
                 {
+                        if( cmd == '\n' )
+                        {
+                                printf( "\n" ) ;
+                        }
                         print_faint_prefix() ;
-                        printf( "" ) ;
                 }
         }
         printf( "%s///%s\n", fffb::terminal_faint(), fffb::terminal_reset() ) ;

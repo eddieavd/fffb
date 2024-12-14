@@ -27,6 +27,7 @@ enum class command_type
         AUTO_ON    ,
         AUTO_OFF   ,
         AUTO_SET   ,
+        SET_LED    ,
         DL_FORCE   ,
         PLAY_FORCE ,
         STOP_FORCE ,
@@ -51,10 +52,59 @@ enum class force_slot : uti::u8_t
         COUNT  =      4 ,
 } ;
 
+struct force_params
+{
+        uti::u8_t params [ FFFB_FORCE_MAX_PARAMS ] ;
+} ;
+
+struct constant_force_params
+{
+        uti::u8_t amplitude ;
+        uti::u8_t padding [ FFFB_FORCE_MAX_PARAMS - 1 ] ;
+} ;
+
+struct spring_force_params
+{
+        uti::u8_t   dead_start ;
+        uti::u8_t     dead_end ;
+        uti::u8_t   slope_left ;
+        uti::u8_t  slope_right ;
+        uti::u8_t  invert_left ;
+        uti::u8_t invert_right ;
+        uti::u8_t    amplitude ;
+} ;
+
+struct damper_force_params
+{
+        uti::u8_t   slope_left ;
+        uti::u8_t  slope_right ;
+        uti::u8_t  invert_left ;
+        uti::u8_t invert_right ;
+        uti::u8_t padding [ FFFB_FORCE_MAX_PARAMS - 4 ] ;
+} ;
+
+struct trapezoid_force_params
+{
+        uti::u8_t amplitude_max ;
+        uti::u8_t amplitude_min ;
+        uti::u8_t      t_at_max ;
+        uti::u8_t      t_at_min ;
+        uti::u8_t  slope_step_x ;
+        uti::u8_t  slope_step_y ;
+        uti::u8_t padding [ FFFB_FORCE_MAX_PARAMS - 6 ] ;
+} ;
+
 struct force_data
 {
         force_type type ;
+        union
+        {
         uti::u8_t params [ FFFB_FORCE_MAX_PARAMS ] ;
+         constant_force_params  constant ;
+           spring_force_params    spring ;
+           damper_force_params    damper ;
+        trapezoid_force_params trapezoid ;
+        } ;
 } ;
 
 enum class ffb_protocol
@@ -72,6 +122,8 @@ struct protocol_provider
 {
         static constexpr report build_report ( ffb_protocol const protocol, command_type const cmd_type, uti::u8_t slots                           ) noexcept ;
         static constexpr report build_report ( ffb_protocol const protocol, command_type const cmd_type, uti::u8_t slots, force_data const & force ) noexcept ;
+
+        static constexpr report set_led_pattern ( ffb_protocol const protocol, uti::u8_t pattern ) noexcept ;
 
         static constexpr report disable_autocenter ( ffb_protocol const protocol, uti::u8_t slots ) noexcept ;
         static constexpr report  enable_autocenter ( ffb_protocol const protocol, uti::u8_t slots ) noexcept ;
@@ -104,10 +156,10 @@ constexpr report protocol_provider::build_report ( ffb_protocol const protocol, 
                 case command_type::STOP_FORCE : return         stop_force( protocol, slots ) ;
                 case command_type::AUTO_SET   : [[ fallthrough ]] ;
                 case command_type::DL_FORCE   :
-                        FFFB_ERR_S( "protocol_provider::build_report", "selected command requires parameters" ) ;
+                        FFFB_F_ERR_S( "protocol_provider::build_report", "selected command requires parameters" ) ;
                         return {} ;
                 default :
-                        FFFB_ERR_S( "protocol_provider::build_report", "unknown command" ) ;
+                        FFFB_F_ERR_S( "protocol_provider::build_report", "unknown command" ) ;
                         return {} ;
         }
 }
@@ -122,10 +174,26 @@ constexpr report protocol_provider::build_report ( ffb_protocol const protocol, 
                 case command_type::AUTO_OFF   : [[ fallthrough ]] ;
                 case command_type::PLAY_FORCE : [[ fallthrough ]] ;
                 case command_type::STOP_FORCE :
-                        FFFB_ERR_S( "protocol_provider::build_report", "excess parameters for selected command" ) ;
+                        FFFB_F_ERR_S( "protocol_provider::build_report", "excess parameters for selected command" ) ;
                         return {} ;
                 default :
-                        FFFB_ERR_S( "protocol_provider::build_report", "unknown command" ) ;
+                        FFFB_F_ERR_S( "protocol_provider::build_report", "unknown command" ) ;
+                        return {} ;
+        }
+}
+
+constexpr report protocol_provider::set_led_pattern ( ffb_protocol const protocol, uti::u8_t pattern ) noexcept
+{
+        pattern = pattern & 0b00011111 ;
+
+        switch( protocol )
+        {
+                case ffb_protocol::logitech_classic : return { 0xF8, 0x12, pattern, 0x00 } ;
+                case ffb_protocol::logitech_hidpp   : return {} ;
+                        FFFB_F_ERR_S( "protocol_provider::set_led_pattern", "protocol not implemented" ) ;
+                        return {} ;
+                default :
+                        FFFB_F_ERR_S( "protocol_provider::set_led_pattern", "protocol not supported" ) ;
                         return {} ;
         }
 }
@@ -138,10 +206,10 @@ constexpr report protocol_provider::disable_autocenter ( ffb_protocol const prot
         {
                 case ffb_protocol::logitech_classic : return { command } ;
                 case ffb_protocol::logitech_hidpp   :
-                        FFFB_ERR_S( "protocol_provider::disable_autocenter", "protocol not implemented" ) ;
+                        FFFB_F_ERR_S( "protocol_provider::disable_autocenter", "protocol not implemented" ) ;
                         return {} ;
                 default :
-                        FFFB_ERR_S( "protocol_provider::disable_autocenter", "protocol not supported" ) ;
+                        FFFB_F_ERR_S( "protocol_provider::disable_autocenter", "protocol not supported" ) ;
                         return {} ;
         }
 }
@@ -154,10 +222,10 @@ constexpr report protocol_provider::enable_autocenter ( ffb_protocol const proto
         {
                 case ffb_protocol::logitech_classic : return { command } ;
                 case ffb_protocol::logitech_hidpp   :
-                        FFFB_ERR_S( "protocol_provider::enable_autocenter", "protocol not implemented" ) ;
+                        FFFB_F_ERR_S( "protocol_provider::enable_autocenter", "protocol not implemented" ) ;
                         return {} ;
                 default :
-                        FFFB_ERR_S( "protocol_provider::enable_autocenter", "protocol not supported" ) ;
+                        FFFB_F_ERR_S( "protocol_provider::enable_autocenter", "protocol not supported" ) ;
                         return {} ;
         }
 }
@@ -173,10 +241,10 @@ constexpr report protocol_provider::set_autocenter ( ffb_protocol const protocol
         {
                 case ffb_protocol::logitech_classic : return { command, 0x00, slope, slope, amplitude, 0x00 } ;
                 case ffb_protocol::logitech_hidpp   :
-                        FFFB_ERR_S( "protocol_provider::set_autocenter", "protocol not implemented" ) ;
+                        FFFB_F_ERR_S( "protocol_provider::set_autocenter", "protocol not implemented" ) ;
                         return {} ;
                 default :
-                        FFFB_ERR_S( "protocol_provider::set_autocenter", "protocol not supported" ) ;
+                        FFFB_F_ERR_S( "protocol_provider::set_autocenter", "protocol not supported" ) ;
                         return {} ;
         }
 }
@@ -191,7 +259,7 @@ constexpr report protocol_provider::download_force ( ffb_protocol const protocol
                 case force_type::   DAMPER : return    _damper_force( protocol, slots, force ) ;
                 case force_type::TRAPEZOID : return _trapezoid_force( protocol, slots, force ) ;
                 default:
-                        FFFB_ERR_S( "protocol_provider::download_force", "force type not supported" ) ;
+                        FFFB_F_ERR_S( "protocol_provider::download_force", "force type not supported" ) ;
                         return {} ;
         }
 }
@@ -205,10 +273,10 @@ constexpr report protocol_provider::play_force ( ffb_protocol const protocol, ut
                 case ffb_protocol::logitech_classic: return { command, 0x00 } ;
                         break ;
                 case ffb_protocol::logitech_hidpp:
-                        FFFB_ERR_S( "protocol_provider::play_force", "protocol not implemented" ) ;
+                        FFFB_F_ERR_S( "protocol_provider::play_force", "protocol not implemented" ) ;
                         return {} ;
                 default:
-                        FFFB_ERR_S( "protocol_provider::play_force", "protocol not supported" ) ;
+                        FFFB_F_ERR_S( "protocol_provider::play_force", "protocol not supported" ) ;
                         return {} ;
         }
 }
@@ -222,10 +290,10 @@ constexpr report protocol_provider::stop_force ( ffb_protocol const protocol, ut
                 case ffb_protocol::logitech_classic: return { command, 0x00 } ;
                         break ;
                 case ffb_protocol::logitech_hidpp:
-                        FFFB_ERR_S( "protocol_provider::play_force", "protocol not implemented" ) ;
+                        FFFB_F_ERR_S( "protocol_provider::play_force", "protocol not implemented" ) ;
                         return {} ;
                 default:
-                        FFFB_ERR_S( "protocol_provider::play_force", "protocol not supported" ) ;
+                        FFFB_F_ERR_S( "protocol_provider::play_force", "protocol not supported" ) ;
                         return {} ;
         }
 }
@@ -239,10 +307,10 @@ constexpr report protocol_provider::_constant_force ( ffb_protocol const protoco
         {
                 case ffb_protocol::logitech_classic : return { command, 0x00, amplitude, amplitude, amplitude, amplitude, 0x00 } ;
                 case ffb_protocol::logitech_hidpp :
-                        FFFB_ERR_S( "protocol_provider::_constant_force", "protocol not implemented" ) ;
+                        FFFB_F_ERR_S( "protocol_provider::_constant_force", "protocol not implemented" ) ;
                         return {} ;
                 default :
-                        FFFB_ERR_S( "protocol_provider::_constant_force", "protocol not supported" ) ;
+                        FFFB_F_ERR_S( "protocol_provider::_constant_force", "protocol not supported" ) ;
                         return {} ;
         }
 }
@@ -267,10 +335,10 @@ constexpr report protocol_provider::_spring_force ( ffb_protocol const protocol,
                                                                uti::u8_t( ( invert_right << 4 ) | invert_left ),
                                                                amplitude } ;
                 case ffb_protocol::logitech_hidpp :
-                        FFFB_ERR_S( "protocol_provider::_spring_force", "protocol not implemented" ) ;
+                        FFFB_F_ERR_S( "protocol_provider::_spring_force", "protocol not implemented" ) ;
                         return {} ;
                 default :
-                        FFFB_ERR_S( "protocol_provider::_spring_force", "protocol not supported" ) ;
+                        FFFB_F_ERR_S( "protocol_provider::_spring_force", "protocol not supported" ) ;
                         return {} ;
         }
 
@@ -289,10 +357,10 @@ constexpr report protocol_provider::_damper_force ( ffb_protocol const protocol,
         {
                 case ffb_protocol::logitech_classic : return { command, 0x02, slope_left, invert_left, slope_right, invert_right, 0x00 } ;
                 case ffb_protocol::logitech_hidpp :
-                        FFFB_ERR_S( "protocol_provider::_damper_force", "protocol not implemented" ) ;
+                        FFFB_F_ERR_S( "protocol_provider::_damper_force", "protocol not implemented" ) ;
                         return {} ;
                 default :
-                        FFFB_ERR_S( "protocol_provider::_damper_force", "protocol not supported" ) ;
+                        FFFB_F_ERR_S( "protocol_provider::_damper_force", "protocol not supported" ) ;
                         return {} ;
         }
 
@@ -313,10 +381,10 @@ constexpr report protocol_provider::_trapezoid_force ( ffb_protocol const protoc
         {
                 case ffb_protocol::logitech_classic : return { command, 0x06, max_amp, min_amp, t_max, t_min, dxdy } ;
                 case ffb_protocol::logitech_hidpp :
-                        FFFB_ERR_S( "protocol_provider::_trapezoid_force", "protocol not implemented" ) ;
+                        FFFB_F_ERR_S( "protocol_provider::_trapezoid_force", "protocol not implemented" ) ;
                         return {} ;
                 default :
-                        FFFB_ERR_S( "protocol_provider::_trapezoid_force", "protocol not supported" ) ;
+                        FFFB_F_ERR_S( "protocol_provider::_trapezoid_force", "protocol not supported" ) ;
                         return {} ;
         }
 }
