@@ -1,8 +1,8 @@
-///
-///
-///     fffb
-///     fffb_scs.cpp
-///
+//
+//
+//      fffb
+//      source/fffb.cxx
+//
 
 /// STD
 
@@ -21,10 +21,11 @@
 
 /// FFFB
 
-#include <fffb/util/version.hpp>
-#include <fffb/device/manager.hpp>
-#include <fffb/wheel/controller.hpp>
-#include <fffb/force/simulator.hpp>
+#include <fffb/util/version.hxx>
+#include <fffb/util/types.hxx>
+#include <fffb/hid/device.hxx>
+#include <fffb/joy/wheel.hxx>
+#include <fffb/force/simulator.hxx>
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -34,7 +35,6 @@ bool g_telemetry_paused { true } ;
 
 fffb::timestamp_t     g_last_timestamp  { static_cast< fffb::timestamp_t >( -1 ) } ;
 fffb::telemetry_state g_telemetry_state {} ;
-fffb::controller      g_wheel_ctrl      {} ;
 fffb::simulator       g_simulator       {} ;
 
 scs_log_t g_game_log { nullptr } ;
@@ -67,29 +67,14 @@ void __attribute__(( destructor )) unload () ;
 
 bool init_wheel () noexcept
 {
-        reset_wheel() ;
-
-        g_wheel_ctrl = fffb::controller( fffb::device_manager().list_devices() ) ;
-
-        if( !g_wheel_ctrl )
-        {
-                g_game_log( SCS_LOG_TYPE_error, "fffb::error : found no known steering wheels!" ) ;
-                FFFB_F_ERR_S( "scs::init_wheel", "found no known steering wheels!" ) ;
-                return false ;
-        }
-        g_game_log( SCS_LOG_TYPE_message, "fffb::info : connected to steering wheel" ) ;
-        FFFB_F_INFO_S( "scs::init_wheel", "connected to steering wheel" ) ;
-
-        if( !g_wheel_ctrl.calibrate() )
+        if( !g_simulator.wheel_ref().calibrate() )
         {
                 g_game_log( SCS_LOG_TYPE_error, "fffb::error : wheel calibration failed!" ) ;
                 FFFB_F_ERR_S( "scs::init_wheel", "wheel calibration failed!" ) ;
                 return false ;
         }
-        reset_wheel() ;
         g_game_log( SCS_LOG_TYPE_message, "fffb::info : wheel calibration successful" ) ;
         FFFB_F_INFO_S( "scs::init_wheel", "wheel calibration successful" ) ;
-
         return true ;
 }
 
@@ -102,54 +87,38 @@ bool update_leds ( float rpm ) noexcept
         static constexpr uti::u8_t led_4 { 0x0F } ;
         static constexpr uti::u8_t led_5 { 0x1F } ;
 
-        if(      rpm ==   0 ) { return g_wheel_ctrl.set_led_pattern( led_0 ) ; }
-        else if( rpm < 1000 ) { return g_wheel_ctrl.set_led_pattern( led_1 ) ; }
-        else if( rpm < 1300 ) { return g_wheel_ctrl.set_led_pattern( led_2 ) ; }
-        else if( rpm < 1600 ) { return g_wheel_ctrl.set_led_pattern( led_3 ) ; }
-        else if( rpm < 1800 ) { return g_wheel_ctrl.set_led_pattern( led_4 ) ; }
-        else if( rpm < 1900 ) { return g_wheel_ctrl.set_led_pattern( led_5 ) ; }
-        else                  { return g_wheel_ctrl.set_led_pattern( led_5 ) ; }
+        if(      rpm ==   0 ) { return g_simulator.wheel_ref().set_led_pattern( led_0 ) ; }
+        else if( rpm < 1000 ) { return g_simulator.wheel_ref().set_led_pattern( led_1 ) ; }
+        else if( rpm < 1300 ) { return g_simulator.wheel_ref().set_led_pattern( led_2 ) ; }
+        else if( rpm < 1600 ) { return g_simulator.wheel_ref().set_led_pattern( led_3 ) ; }
+        else if( rpm < 1800 ) { return g_simulator.wheel_ref().set_led_pattern( led_4 ) ; }
+        else if( rpm < 1900 ) { return g_simulator.wheel_ref().set_led_pattern( led_5 ) ; }
+        else                  { return g_simulator.wheel_ref().set_led_pattern( led_5 ) ; }
 }
 
 bool reset_wheel () noexcept
 {
         FFFB_F_INFO_S( "scs::reset_wheel", "resetting wheel" ) ;
 
-        return g_wheel_ctrl ? g_wheel_ctrl.disable_autocenter() 
-                           && g_wheel_ctrl.       stop_forces()
-                           && g_wheel_ctrl.      clear_forces()
-                           && g_wheel_ctrl.set_led_pattern( 0 )
-                            : true ;
+        return g_simulator.wheel_ref() ? g_simulator.wheel_ref().q_disable_autocenter()
+                                       , g_simulator.wheel_ref().q_stop_forces()
+                                       , g_simulator.wheel_ref().q_set_led_pattern( 0 )
+                                       , g_simulator.wheel_ref().flush_reports()
+                                       : true ;
 }
 
 bool update_ffb ( fffb::telemetry_state const & telemetry ) noexcept
 {
-        if( !g_wheel_ctrl ) return false ;
+        if( !g_simulator.wheel_ref() ) return false ;
 
-        static uti::i32_t ffb_rate       { 16 } ;
-        static uti::i32_t ffb_rate_count { 16 } ;
+        static uti::i32_t ffb_rate       { 32 } ;
+        static uti::i32_t ffb_rate_count { 32 } ;
 
         --ffb_rate_count ;
 
         if( ffb_rate_count == 0 )
         {
-                FFFB_F_INFO_S( "scs::update_ffb", "updating force feedback..." ) ;
-
-                auto forces = g_simulator.simulate_forces( telemetry ) ;
-
-                if( forces.empty() ) return true ;
-
-                FFFB_F_INFO_S( "scs::update_ffb", "simulation state changed, updating forces..." ) ;
-
-                g_wheel_ctrl.clear_forces() ;
-                g_wheel_ctrl.add_forces( forces ) ;
-
-                g_wheel_ctrl.stop_forces() ;
-                g_wheel_ctrl.download_forces() ;
-                g_wheel_ctrl.play_forces() ;
-
-                FFFB_F_INFO_S( "scs::update_ffb", "forces updated" ) ;
-
+                g_simulator.update_forces( telemetry ) ;
                 update_leds( telemetry.rpm ) ;
 
                 ffb_rate_count = ffb_rate ;
@@ -157,10 +126,7 @@ bool update_ffb ( fffb::telemetry_state const & telemetry ) noexcept
         return true ;
 }
 
-void deinit_wheel () noexcept
-{
-        if( g_wheel_ctrl ) g_wheel_ctrl.device().close() ;
-}
+void deinit_wheel () noexcept {}
 
 
 SCSAPI_VOID telemetry_frame_start ( [[ maybe_unused ]] scs_event_t const event, void const * const event_info, [[ maybe_unused ]] scs_context_t const context )
@@ -328,6 +294,8 @@ SCSAPI_RESULT scs_telemetry_init ( scs_u32_t const version, scs_telemetry_init_p
         version_params->register_for_channel( SCS_TELEMETRY_TRUCK_CHANNEL_effective_throttle, SCS_U32_NIL, SCS_VALUE_TYPE_float, SCS_TELEMETRY_CHANNEL_FLAG_none, telemetry_store_float, &g_telemetry_state.throttle  ) ;
         version_params->register_for_channel( SCS_TELEMETRY_TRUCK_CHANNEL_effective_brake   , SCS_U32_NIL, SCS_VALUE_TYPE_float, SCS_TELEMETRY_CHANNEL_FLAG_none, telemetry_store_float, &g_telemetry_state.brake     ) ;
         version_params->register_for_channel( SCS_TELEMETRY_TRUCK_CHANNEL_effective_clutch  , SCS_U32_NIL, SCS_VALUE_TYPE_float, SCS_TELEMETRY_CHANNEL_FLAG_none, telemetry_store_float, &g_telemetry_state.clutch    ) ;
+
+//      version_params->register_for_channel( SCS_TELEMETRY_TRUCK_CHANNEL_wheel_substance, SCS_U32_NIL, SCS_VALUE_TYPE_s32, SCS_TELEMETRY_CHANNEL_FLAG_none, telemetry_store_s32, &g_telemetry_state.substance_l ) ;
 
         g_game_log( SCS_LOG_TYPE_message, "fffb::info : channel registration completed" ) ;
         FFFB_F_INFO_S( "scs::scs_telemetry_init", "channel registration completed" ) ;

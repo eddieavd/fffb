@@ -1,13 +1,13 @@
 ///
 ///
 ///     fffb
-///     util/log.hpp
+///     util/log.hxx
 ///
 
 #pragma once
 
-#include <uti/string/string.hpp>
-#include <uti/string/string_view.hpp>
+#include <uti/core/string/string.hxx>
+#include <uti/core/string/string_view.hxx>
 
 #include <ctime>
 #include <cstdarg>
@@ -158,6 +158,8 @@ namespace fffb
 {
 
 
+using string = uti::generic_string< char, uti::allocator< char, uti::malloc_resource > > ;
+
 constexpr char const * terminal_reset     () { return FFFB_VTSEQ( 0 ) ; }
 constexpr char const * terminal_bold      () { return FFFB_VTSEQ( 1 ) ; }
 constexpr char const * terminal_faint     () { return FFFB_VTSEQ( 2 ) ; }
@@ -224,9 +226,9 @@ constexpr timespec time_current_mono () noexcept
         return time ;
 }
 
-constexpr uti::string time_string ()
+constexpr string time_string ()
 {
-        uti::string time_str( 2 + 1 + 2 + 1 + 2 + 1 + 3 + 1 ) ; // HH:MM:SS:mmm\0
+        string time_str( 2 + 1 + 2 + 1 + 2 + 1 + 3 + 1 ) ; // HH:MM:SS:mmm\0
 
         timespec time = time_current() ;
 
@@ -252,7 +254,7 @@ constexpr uti::string time_string ()
 
 constexpr void log_2_v ( FILE * dest, log_level level, char const * fmt, va_list args )
 {
-        uti::string time = time_string() ;
+        string time = time_string() ;
 
         switch( level )
         {
@@ -286,7 +288,7 @@ constexpr void log_2_v ( FILE * dest, log_level level, char const * fmt, va_list
 
 constexpr void log_3_v ( FILE * dest, log_level level, char const * scope, char const * fmt, va_list args )
 {
-        uti::string time = time_string() ;
+        string time = time_string() ;
 
         switch( level )
         {
