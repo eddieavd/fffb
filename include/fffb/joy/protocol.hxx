@@ -26,16 +26,12 @@ namespace fffb
 
 ////////////////////////////////////////////////////////////////////////////////
 
-constexpr uti::u32_t Logitech_VendorID      { 0x0000046d } ;
-constexpr uti::u32_t Logitech_G923_DeviceID { 0xc266046d } ;
-constexpr uti::u32_t Logitech_G920_DeviceID { 0x0000046d } ;
-constexpr uti::u32_t Logitech_G29_DeviceID  { 0x0000046d } ;
+constexpr uti::u32_t Logitech_VendorID         { 0x0000046d } ;
+constexpr uti::u32_t Logitech_G923_PS_DeviceID { 0xc266046d } ;
 
-constexpr uti::array< uti::u32_t, 3 > known_wheel_device_ids
+constexpr uti::array< uti::u32_t, 1 > known_wheel_device_ids
 {
-        Logitech_G923_DeviceID,
-        Logitech_G920_DeviceID,
-        Logitech_G29_DeviceID ,
+        Logitech_G923_PS_DeviceID,
 } ;
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -67,6 +67,9 @@ private:
 
         constexpr uti::u8_t _map_rmp_to_freq ( float _rpm_ ) const noexcept
         { return ( 255 - ( _rpm_ / 3000.0f * 255.0f ) ) / 4 ; }
+
+        constexpr uti::u8_t _map_speed_to_freq ( float _speed_ ) const noexcept
+        { return ( 255 - ( _speed_ / 160.0f * 255.0f ) ) / 4 ; }
 } ;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -116,9 +119,9 @@ constexpr void simulator::_update_constant ( [[ maybe_unused ]] telemetry_state 
 
 constexpr void simulator::_update_spring ( telemetry_state const & _new_state_ ) noexcept
 {
-        wheel_.spring_force() = wheel::default_spring_f ;
-
         double speed = _new_state_.speed < 0.0 ? -_new_state_.speed : _new_state_.speed ;
+
+        wheel_.spring_force() = wheel::default_spring_f ;
 
         if( speed < 0.10 )
         {
@@ -138,10 +141,9 @@ constexpr void simulator::_update_spring ( telemetry_state const & _new_state_ )
 
 constexpr void simulator::_update_damper ( telemetry_state const & _new_state_ ) noexcept
 {
-        wheel_.damper_force() = wheel::default_damper_f ;
-
         double rpm = _new_state_.rpm ;
 
+        wheel_.damper_force() = wheel::default_damper_f ;
         wheel_.damper_force().enabled = true ;
 
         if( rpm == 0 )
