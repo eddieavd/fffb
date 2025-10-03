@@ -61,9 +61,6 @@ public:
 
         [[ nodiscard ]] constexpr hid_device const & device () const noexcept { return device_ ; }
 
-        [[ nodiscard ]] constexpr spring_force_params       & autocenter_force ()       noexcept { return autocenter_ ; }
-        [[ nodiscard ]] constexpr spring_force_params const & autocenter_force () const noexcept { return autocenter_ ; }
-
         [[ nodiscard ]] constexpr constant_force_params       & constant_force ()       noexcept { return constant_ ; }
         [[ nodiscard ]] constexpr constant_force_params const & constant_force () const noexcept { return constant_ ; }
 
@@ -81,7 +78,6 @@ private:
 
         constant_force_params   constant_ { default_const_f  } ;
         spring_force_params       spring_ { default_spring_f } ;
-        spring_force_params   autocenter_ { default_spring_f } ;
         damper_force_params       damper_ { default_damper_f } ;
         trapezoid_force_params trapezoid_ { default_trap_f   } ;
 
@@ -102,19 +98,31 @@ constexpr wheel::wheel () noexcept
 
         for( auto & device : devices )
         {
-                for( uti::ssize_t i = 0; i < known_wheel_device_ids.size(); ++i )
+                if( device.usage     () != FFFB_WHEEL_USAGE ||
+                    device.usage_page() != FFFB_WHEEL_USAGE_PAGE )
                 {
-                        if( device.device_id () == known_wheel_device_ids[ i ]
+                        FFFB_F_DBG_S( "wheel::ctor", "skipping device 0x%.8x due to bad usage" ) ;
+                        continue ;
+                }
+                for( auto const & known_wheel : known_wheel_device_ids )
+                {
+                        if( device.device_id () == known_wheel
                          && device.usage_page() == FFFB_WHEEL_USAGE_PAGE
                          && device.usage     () == FFFB_WHEEL_USAGE )
                         {
-                                FFFB_F_DBG_S( "wheel", "found wheel with device id 0x%.8x", device.device_id() ) ;
-                                device_ = device ;
+                                FFFB_F_INFO_S( "wheel::ctor", "found wheel with device id 0x%.8x", device.device_id() ) ;
+                                device_ = UTI_MOVE( device ) ;
                                 protocol_ = get_supported_protocol( device_ ) ;
+
+                                return ;
                         }
                 }
+                if( device.vendor_id() == Logitech_VendorID )
+                {
+                        FFFB_F_WARN_S( "wheel::ctor", "found unknown logitech wheel with device id 0x%.8x", device.device_id() ) ;
+                }
         }
-        FFFB_F_ERR_S( "wheel", "no known wheels found!" ) ;
+        FFFB_F_ERR_S( "wheel::ctor", "no known wheels found!" ) ;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -213,13 +221,11 @@ constexpr void wheel::q_enable_autocenter () noexcept
 
 constexpr bool wheel::download_forces () const noexcept
 {
-        force f_auto   { force_type::SPRING   , {} } ;
         force f_const  { force_type::CONSTANT , {} } ;
         force f_spring { force_type::SPRING   , {} } ;
         force f_damper { force_type::DAMPER   , {} } ;
         force f_trap   { force_type::TRAPEZOID, {} } ;
 
-        f_auto  .spring    = autocenter_ ;
         f_const .constant  = constant_   ;
         f_spring.spring    = spring_     ;
         f_damper.damper    = damper_     ;
@@ -227,10 +233,6 @@ constexpr bool wheel::download_forces () const noexcept
 
         vector< report > reports( 5 ) ;
 
-        if( f_auto.params.enabled )
-        {
-                reports.emplace_back( protocol::set_autocenter( protocol_, f_auto ) ) ;
-        }
         if( f_const.params.enabled )
         {
                 reports.emplace_back( protocol::download_force( protocol_, f_const ) ) ;
@@ -252,24 +254,16 @@ constexpr bool wheel::download_forces () const noexcept
 
 constexpr void wheel::q_download_forces () noexcept
 {
-        force f_auto   { force_type::SPRING   , {} } ;
         force f_const  { force_type::CONSTANT , {} } ;
         force f_spring { force_type::SPRING   , {} } ;
         force f_damper { force_type::DAMPER   , {} } ;
         force f_trap   { force_type::TRAPEZOID, {} } ;
 
-        f_auto  .spring    = autocenter_ ;
         f_const .constant  = constant_   ;
         f_spring.spring    = spring_     ;
         f_damper.damper    = damper_     ;
         f_trap  .trapezoid = trapezoid_  ;
 
-        vector< report > reports( 5 ) ;
-
-        if( f_auto.params.enabled )
-        {
-                reports_.emplace_back( protocol::set_autocenter( protocol_, f_auto ) ) ;
-        }
         if( f_const.params.enabled )
         {
                 reports_.emplace_back( protocol::download_force( protocol_, f_const ) ) ;
@@ -384,8 +378,6 @@ constexpr void wheel::q_refresh_forces () noexcept
         f_spring. spring =    spring_ ;
         f_damper. damper =    damper_ ;
         f_trap.trapezoid = trapezoid_ ;
-
-        vector< report > reports( 4 ) ;
 
         if( f_const.params.enabled )
         {

@@ -99,14 +99,22 @@ constexpr void simulator::update_forces ( telemetry_state const & _new_state_ ) 
         _update_damper    ( _new_state_ ) ;
         _update_trapezoid ( _new_state_ ) ;
 
-        wheel_.q_refresh_forces() ;
-
-        wheel_.flush_reports() ;
+        wheel_.refresh_forces() ;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
-constexpr void simulator::_update_autocenter ( telemetry_state const & _new_state_ ) noexcept
+constexpr void simulator::_update_autocenter ( [[ maybe_unused ]] telemetry_state const & _new_state_ ) noexcept
+{}
+
+////////////////////////////////////////////////////////////////////////////////
+
+constexpr void simulator::_update_constant ( [[ maybe_unused ]] telemetry_state const & _new_state_ ) noexcept
+{}
+
+////////////////////////////////////////////////////////////////////////////////
+
+constexpr void simulator::_update_spring ( telemetry_state const & _new_state_ ) noexcept
 {
         wheel_.spring_force() = wheel::default_spring_f ;
 
@@ -128,18 +136,25 @@ constexpr void simulator::_update_autocenter ( telemetry_state const & _new_stat
 
 ////////////////////////////////////////////////////////////////////////////////
 
-constexpr void simulator::_update_constant ( [[ maybe_unused ]] telemetry_state const & _new_state_ ) noexcept
-{}
+constexpr void simulator::_update_damper ( telemetry_state const & _new_state_ ) noexcept
+{
+        wheel_.damper_force() = wheel::default_damper_f ;
 
-////////////////////////////////////////////////////////////////////////////////
+        double rpm = _new_state_.rpm ;
 
-constexpr void simulator::_update_spring ( [[ maybe_unused ]] telemetry_state const & _new_state_ ) noexcept
-{}
+        wheel_.damper_force().enabled = true ;
 
-////////////////////////////////////////////////////////////////////////////////
-
-constexpr void simulator::_update_damper ( [[ maybe_unused ]] telemetry_state const & _new_state_ ) noexcept
-{}
+        if( rpm == 0 )
+        {
+                wheel_.damper_force().slope_left  = 6 ;
+                wheel_.damper_force().slope_right = 6 ;
+        }
+        else
+        {
+                wheel_.damper_force().slope_left  = 3 ;
+                wheel_.damper_force().slope_right = 3 ;
+        }
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 
