@@ -6,4 +6,4 @@
 
 #pragma once
 
-#define FFFB_VERSION "0.2.0"
+#define FFFB_VERSION "0.1.0"
