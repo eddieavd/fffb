@@ -110,7 +110,7 @@ constexpr wheel::wheel () noexcept
                          && device.usage_page() == FFFB_WHEEL_USAGE_PAGE
                          && device.usage     () == FFFB_WHEEL_USAGE )
                         {
-                                FFFB_F_INFO_S( "wheel::ctor", "found wheel with device id 0x%.8x", device.device_id() ) ;
+                                FFFB_F_INFO_S( "wheel::ctor", "using wheel with device id 0x%.8x", device.device_id() ) ;
                                 device_ = UTI_MOVE( device ) ;
                                 protocol_ = get_supported_protocol( device_ ) ;
 
@@ -119,7 +119,11 @@ constexpr wheel::wheel () noexcept
                 }
                 if( device.vendor_id() == Logitech_VendorID )
                 {
-                        FFFB_F_WARN_S( "wheel::ctor", "found unknown logitech wheel with device id 0x%.8x", device.device_id() ) ;
+                        FFFB_F_WARN_S( "wheel::ctor", "using unknown logitech wheel with device id 0x%.8x", device.device_id() ) ;
+                        device_ = UTI_MOVE( device ) ;
+                        protocol_ = get_supported_protocol( device_ ) ;
+
+                        return ;
                 }
         }
         FFFB_F_ERR_S( "wheel::ctor", "no known wheels found!" ) ;
