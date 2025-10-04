@@ -28,10 +28,12 @@ namespace fffb
 
 constexpr uti::u32_t Logitech_VendorID         { 0x0000046d } ;
 constexpr uti::u32_t Logitech_G923_PS_DeviceID { 0xc266046d } ;
+constexpr uti::u32_t Logitech_G29_PS4_DeviceID { 0xc24f046d } ;
 
-constexpr uti::array< uti::u32_t, 1 > known_wheel_device_ids
+constexpr uti::array< uti::u32_t, 2 > known_wheel_device_ids
 {
         Logitech_G923_PS_DeviceID,
+        Logitech_G29_PS4_DeviceID,
 } ;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -152,6 +154,8 @@ public:
         static constexpr report    play_force ( ffb_protocol const protocol, uti::u8_t slots ) noexcept ;
         static constexpr report refresh_force ( ffb_protocol const protocol, force const & f ) noexcept ;
         static constexpr report    stop_force ( ffb_protocol const protocol, uti::u8_t slots ) noexcept ;
+
+        static constexpr vector< report > init_sequence ( ffb_protocol const protocol, uti::u32_t device_id ) noexcept ;
 private:
         static constexpr report  _constant_force ( ffb_protocol const protocol, force const & force ) noexcept ;
         static constexpr report    _spring_force ( ffb_protocol const protocol, force const & force ) noexcept ;
@@ -326,6 +330,27 @@ constexpr report protocol::stop_force ( ffb_protocol const protocol, uti::u8_t s
                         FFFB_F_ERR_S( "protocol::play_force", "protocol not supported" ) ;
                         return {} ;
         }
+}
+
+constexpr vector< report > protocol::init_sequence ( ffb_protocol const protocol, uti::u32_t device_id ) noexcept
+{
+        vector< report > reports ;
+
+        if( protocol == ffb_protocol::logitech_classic )
+        {
+                switch( device_id )
+                {
+                        case Logitech_G923_PS_DeviceID:
+                                reports.push_back( { 0x30, 0xf8, 0x09, 0x05, 0x01 } ) ;
+                                break ;
+                        case Logitech_G29_PS4_DeviceID:
+                                reports.push_back( { 0x30, 0xf8, 0x09, 0x05, 0x01 } ) ;
+                                break ;
+                        default:
+                                FFFB_F_ERR_S( "protocol::init_sequence", "unknown device id" ) ;
+                }
+        }
+        return reports ;
 }
 
 constexpr report protocol::_constant_force ( ffb_protocol const protocol, force const & f ) noexcept

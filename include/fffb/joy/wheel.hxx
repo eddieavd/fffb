@@ -87,6 +87,8 @@ private:
 
         constexpr bool _write_report (          report   const & report , char const * scope ) const noexcept ;
         constexpr bool _write_reports ( vector< report > const & reports, char const * scope ) const noexcept ;
+
+        constexpr bool _init_protocol () const noexcept ;
 } ;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -113,8 +115,6 @@ constexpr wheel::wheel () noexcept
                                 FFFB_F_INFO_S( "wheel::ctor", "using wheel with device id 0x%.8x", device.device_id() ) ;
                                 device_ = UTI_MOVE( device ) ;
                                 protocol_ = get_supported_protocol( device_ ) ;
-
-                                return ;
                         }
                 }
                 if( device.vendor_id() == Logitech_VendorID )
@@ -122,11 +122,16 @@ constexpr wheel::wheel () noexcept
                         FFFB_F_WARN_S( "wheel::ctor", "using unknown logitech wheel with device id 0x%.8x", device.device_id() ) ;
                         device_ = UTI_MOVE( device ) ;
                         protocol_ = get_supported_protocol( device_ ) ;
-
-                        return ;
                 }
         }
-        FFFB_F_ERR_S( "wheel::ctor", "no known wheels found!" ) ;
+        if( device_ )
+        {
+                _init_protocol() ;
+        }
+        else
+        {
+                FFFB_F_ERR_S( "wheel::ctor", "no known wheels found!" ) ;
+        }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -468,6 +473,17 @@ constexpr bool wheel::_write_reports ( vector< report > const & reports, [[ mayb
                 return false ;
         }
         return true ;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+constexpr bool wheel::_init_protocol () const noexcept
+{
+        auto init_sequence = protocol::init_sequence( protocol_, device_.device_id() ) ;
+
+        if( init_sequence.empty() ) return true ;
+
+        return _write_reports( init_sequence, "wheel::init_sequence" ) ;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
