@@ -89,7 +89,7 @@ constexpr bool simulator::initialize_wheel () noexcept
         wheel_.disable_autocenter() ;
         wheel_.stop_forces() ;
 
-        return wheel_.calibrate() ;
+        return true ;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

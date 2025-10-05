@@ -1,6 +1,6 @@
 cmake_minimum_required( VERSION 3.23 )
 
-project( fffb VERSION 0.1.1 )
+project( fffb VERSION 0.1.2 )
 
 set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
 
