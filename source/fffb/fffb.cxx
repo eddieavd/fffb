@@ -216,9 +216,13 @@ SCSAPI_VOID telemetry_store_s32 ( [[ maybe_unused ]] scs_string_t const name, [[
 
 SCSAPI_VOID telemetry_store_u32 ( [[ maybe_unused ]] scs_string_t const name, [[ maybe_unused ]] scs_u32_t const index, scs_value_t const * const value, scs_context_t const context )
 {
-        assert( value ) ;
-        assert( value->type == SCS_VALUE_TYPE_u32 ) ;
         assert( context ) ;
+
+        if( !value ) // registered with SCS_TELEMETRY_CHANNEL_FLAG_no_value - called with null when value unavailable
+        {
+                return ;
+        }
+        assert( value->type == SCS_VALUE_TYPE_u32 ) ;
         *static_cast< int * >( context ) = value->value_u32.value ;
 }
 
